@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>胡闹大学 v1.1 Web</title>
+<style>
+:root{--bg:#0f1115;--card:#181c23;--line:#2a303a;--text:#f4f4f5;--muted:#a8adb7;--accent:#f2c94c;--good:#78dba9;--bad:#ff8b8b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Noto Sans CJK SC",sans-serif}
+main{max-width:720px;margin:auto;padding:20px 16px 48px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:12px 0}
+h1{font-size:30px;margin:10px 0 4px}.sub,.muted{color:var(--muted)}input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#101319;color:white;font-size:16px}
+button{border:1px solid var(--line);background:#222833;color:white;border-radius:14px;padding:14px;font-size:16px;cursor:pointer;min-height:50px}button:hover{border-color:#596273}button.primary{background:var(--accent);color:#161616;font-weight:800;border:0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.origins{display:grid;gap:10px}.origin{text-align:left}.top{display:flex;justify-content:space-between;gap:12px;align-items:end}.day{font-weight:800;font-size:20px}
+.stat{margin:12px 0}.statline{display:flex;justify-content:space-between;margin-bottom:6px}.bar{height:10px;background:#0d1015;border-radius:20px;overflow:hidden}.fill{height:100%;background:var(--accent);transition:width .25s}.money{font-size:21px;font-weight:800}
+.log{white-space:pre-wrap;line-height:1.65;max-height:330px;overflow:auto}.changes{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.pill{padding:6px 9px;border-radius:999px;background:#262d37;font-size:14px}.good{color:var(--good)}.bad{color:var(--bad)}
+.hidden{display:none!important}.ending{font-size:24px;font-weight:900;margin:8px 0}.ach{padding:9px 0;border-bottom:1px solid var(--line)}footer{text-align:center;color:var(--muted);font-size:13px;margin-top:20px}
+@media(max-width:420px){h1{font-size:26px}.grid{grid-template-columns:1fr 1fr}button{font-size:15px;padding:12px 8px}}
+</style>
+</head>
+<body><main>
+<section id="start">
+<h1>🎓 胡闹大学</h1><div class="sub">v1.1 Web · 七日大学生活模拟器</div>
+<div class="card"><p>你将在这里度过非常充实（大概）的七天。每天 5 个时间块，共 35 次行动。</p>
+<label>你的名字</label><input id="name" maxlength="19" placeholder="请输入名字">
+<p><b>请选择你的出生</b></p><div class="origins">
+<button class="origin" data-origin="1"><b>1. 天龙人</b><br><span class="muted">一出生就站在别人毕业后的终点。</span></button>
+<button class="origin" data-origin="2"><b>2. 老鼠人</b><br><span class="muted">活着已经消耗了大部分力气。</span></button>
+<button class="origin" data-origin="3"><b>3. 平凡的一块石头</b><br><span class="muted">没什么特别，但至少还能滚。</span></button>
+<button class="origin" data-origin="4"><b>4. 管他呢随便吧</b><br><span class="muted">把命运交给随机数。</span></button>
+</div></div></section>
+
+<section id="game" class="hidden">
+<div class="top"><div><div id="day" class="day"></div><div id="block" class="muted"></div></div><div id="money" class="money"></div></div>
+<div class="card" id="stats"></div>
+<div class="card"><b>今天干点什么？</b><div class="grid" style="margin-top:12px">
+<button data-action="1">📚 上课</button><button data-action="2">💪 健身</button>
+<button data-action="3">🎮 宅家打游戏</button><button data-action="4">🚀 起飞</button>
+<button data-action="5">💼 打工</button><button data-action="6">🍱 吃饭</button>
+<button data-action="7">😴 睡觉</button><button data-action="8">🚶 出门逛逛</button>
+</div></div>
+<div class="card"><b>发生了什么</b><div id="log" class="log"></div><div id="changes" class="changes"></div></div>
+</section>
+
+<section id="result" class="hidden">
+<h1>🎓 七天后……</h1><div class="card"><div class="muted">最终结局</div><div id="ending" class="ending"></div><div id="endingText" class="log"></div></div>
+<div class="card"><b>最终状态</b><div id="finalStats"></div></div>
+<div class="card"><b>🏆 成就结算</b><div id="achievements"></div></div>
+<button id="restart" class="primary" style="width:100%">再来一局</button>
+</section>
+<footer>《胡闹大学》· 原作 C 语言版本 / Web 移植版</footer>
+</main>
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+let S;
+const r=n=>Math.floor(Math.random()*n);
+function fresh(){return {name:"",mood:50,health:50,money:8000,knowledge:50,day:1,block:1,counts:[0,0,0,0,0,0,0,0],over:false}}
+function clamp(){S.mood=Math.max(0,Math.min(100,S.mood));S.health=Math.max(0,Math.min(100,S.health));S.knowledge=Math.max(0,Math.min(100,S.knowledge));S.money=Math.max(0,S.money)}
+function snapshot(){return {mood:S.mood,health:S.health,money:S.money,knowledge:S.knowledge}}
+function delta(o){return [["心情",S.mood-o.mood,""],["健康",S.health-o.health,""],["学识",S.knowledge-o.knowledge,""],["金钱",S.money-o.money,"円"]].filter(x=>x[1]!==0)}
+function setLog(title,text,ds=[]){$("#log").textContent=`【${title}】\n${text}`;$("#changes").innerHTML=ds.length?ds.map(([n,v,u])=>`<span class="pill ${v>0?"good":"bad"}">${n} ${v>0?"+":""}${v}${u}</span>`).join(""):'<span class="pill">什么都没有发生。</span>'}
+function statsHTML(){return [["心情",S.mood],["健康",S.health],["学识",S.knowledge]].map(([n,v])=>`<div class="stat"><div class="statline"><span>${n}</span><b>${v} / 100</b></div><div class="bar"><div class="fill" style="width:${v}%"></div></div></div>`).join("")}
+function render(){clamp();$("#day").textContent=`DAY ${S.day} / 7`;$("#block").textContent=`第 ${S.block} / 5 个时间块 · ${S.name}`;$("#money").textContent=`¥${S.money.toLocaleString()}`;$("#stats").innerHTML=statsHTML()}
+function start(origin){S=fresh();S.name=$("#name").value.trim()||"无名大学生";let msg="";
+if(origin===1){S.mood=S.health=S.knowledge=100;S.money=30000;msg="很好。出生已经替你解决了大部分问题。"}
+if(origin===2){S.mood=S.health=S.knowledge=20;S.money=2000;msg="你的大学生活还没开始，看起来已经快结束了。"}
+if(origin===3){S.mood=S.health=S.knowledge=50;S.money=8000;msg="普通得令人安心。"}
+if(origin===4){S.mood=r(81)+20;S.health=r(81)+20;S.knowledge=r(81)+20;S.money=r(19001)+1000;msg="你盯着自己的属性看了一会儿。算了，投胎这种东西本来就不是你能控制的。"}
+$("#start").classList.add("hidden");$("#game").classList.remove("hidden");setLog(["","天龙人","老鼠人","平凡的一块石头","管他呢随便吧"][origin],msg);render()}
+function event(){
+let o=snapshot(),e=r(10),t="",x="";
+if(e===0){t="教授の慈悲";x="教授突然宣布提前下课。\n你一度怀疑自己听错了。";S.mood+=8;S.health+=3}
+else if(e===1){t="Steam促销";x="你本来只想看一眼。\n";if(S.money>=1800){x+="三个小时后，你拥有了七款大概永远不会打开的游戏。";S.money-=1800;S.mood+=15}else{x+="余额救了你。你什么也买不起。";S.mood-=2}}
+else if(e===2){t="路边捡钱";x="你低头发现了1000円。\n你环顾四周。\n……";S.money+=1000;S.mood+=5}
+else if(e===3){t="东京的雨";x="你没带伞。\n天气预报昨天确实说了会下雨。\n你没看。";S.health-=5;S.mood-=7}
+else if(e===4){t="自动售货机的祝福";x="自动售货机掉下来两瓶饮料。\n你沉默了。\n自动售货机也沉默了。";S.mood+=15;S.health+=3}
+else if(e===5){t="突然的小测验";if(S.knowledge>=60){x="你居然会做。\n这一刻，知识真的改变了命运。";S.mood+=8;S.knowledge+=3}else{x="试卷认识你。\n你不认识试卷。";S.mood-=8}}
+else if(e===6){t="朋友请客";x="朋友突然说：“今天我请。”\n你第一次如此深刻地理解了友情。";S.health+=8;S.mood+=10}
+else if(e===7){t="睡过头";x="你睁开眼睛。\n手机上的时间让你重新闭上了眼睛。";S.mood-=4;S.health+=3}
+else if(e===8){t="迷之好运";x="今天什么都很顺。\n电车有座，天气舒服，便利店也不用排队。";S.mood+=12}
+else{t="什么都没发生";x="今天居然非常普通。\n在胡闹大学，这本身就是一种异常。";S.mood+=2}
+clamp();return {title:"随机事件 · "+t,text:x,ds:delta(o)}
+}
+function act(c){if(S.over)return;S.counts[c-1]++;let o=snapshot(),t="",x="",ev;
+if(c===1){t="上课";if(r(100)<20){x="你冲进车站。\n电车门在你面前缓缓关上。\n你和车里的乘客隔着玻璃深情对视。\n\n没挤上电车，迟到了！本次学习收益减半。";S.knowledge+=6;S.mood-=4;S.health-=2}else{x="你真的去上课了。\n教授甚至有点意外。";S.knowledge+=12;S.mood-=3;S.health-=2}}
+else if(c===2){t="健身";if(S.money>=500){x="你去了健身房。\n镜子里的自己看起来突然很有希望。";S.money-=500;S.health+=12;S.mood+=5}else{x="你摸了摸钱包。\n健身房今天与你无缘。\n于是你在宿舍做了20个深蹲。";S.health+=5;S.mood-=2}}
+else if(c===3){t="宅家打游戏";x="“只玩一会儿。”\n几个小时过去了。";S.mood+=12;S.health-=5;S.knowledge-=2}
+else if(c===4){t="起飞";x="你决定暂时离开地球表面。\n具体怎么飞的不重要。\n重要的是你飞了。";S.mood+=8;S.health-=4}
+else if(c===5){t="打工";x="你用宝贵的青春换来了工资。\n资本主义对你的表现表示满意。";S.money+=2500;S.mood-=5;S.health-=6}
+else if(c===6){t="吃饭";if(S.money>=1000){if(r(100)<25){x="你走进超市。\n远处的店员拿出了半价贴纸。\n\n贴！贴！贴！\n\n你抢到了半价便当！\n1000円 -> 500円";S.money-=500;S.health+=10;S.mood+=8}else{x="你认真吃了一顿饭。\n原来人类吃饭之后真的会舒服一点。";S.money-=1000;S.health+=10;S.mood+=3}}else if(S.money>=300){x="你看了一眼余额。\n今天只能吃便利店饭团了。";S.money-=300;S.health+=4;S.mood-=2}else{x="你打开钱包。\n钱包也看着你。\n\n你没钱吃饭。";S.health-=8;S.mood-=8}}
+else if(c===7){t="睡觉";x="你决定今天最大的成就就是闭上眼睛。\n这是一个非常成熟的决定。";S.health+=15;S.mood+=5}
+else{t="出门逛逛";if(S.money>=500){S.money-=500;S.mood+=6;x="你离开了宿舍。\n光是看到外面的世界，心情就好了一点。"}else{x="你没有500円。\n于是选择了免费的散步路线。";S.mood+=3;S.health+=2}}
+clamp();let base=delta(o);if(checkOver())return;
+if(c===8){ev=event();setLog(t,x,base);render();setTimeout(()=>{if(!S.over){setLog(ev.title,ev.text,ev.ds);if(checkOver())return;advance()}},450);return}
+if(r(100)<25){ev=event();setLog(t,x,base);render();setTimeout(()=>{if(!S.over){setLog(ev.title,ev.text,ev.ds);if(checkOver())return;advance()}},450)}else{setLog(t,x,base);advance()}
+}
+function advance(){render();S.block++;if(S.block>5){S.block=1;S.day++}if(S.day>7){finish(false);return}render()}
+function checkOver(){clamp();if(S.health<=0){finish(true,"《我靠你不活了啊？》","你的健康归零了。\n这次是真的撑不住了。");return true}if(S.mood<=0){finish(true,"《电车延迟》","你的心情归零了。\n你彻底绷不住了，大学生活到此为止。");return true}return false}
+function ending(){if(S.mood>=85&&S.health>=85&&S.knowledge>=85&&S.money>=20000)return["《你是不是偷偷读档了？》","学习、健康、快乐、金钱。\n别人说人生不能什么都要。\n你说：为什么不能？"];
+if(S.mood<=25&&S.health<=25&&S.knowledge<=25&&S.money<=3000)return["《胡闹大学》","你回顾了自己的七天。\n……\n至少游戏标题出现了。"];
+if(S.knowledge>=90)return["《图书馆最终Boss》","七天过去了。\n别人问你大学生活怎么样。\n你想了想：\n“大学……有生活吗？”"];
+if(S.health>=90)return["《这里是大学，不是健身房》","教授已经不认识你了。\n健身房前台认识。"];
+if(S.mood>=90)return["《这辈子有了》","绩点是什么？不知道。\n但是你真的很开心。"];
+if(S.money>=30000)return["《资本主义的走狗》","同学还在赶作业。\n你正在研究下个月的排班表。"];
+if(S.health<=20)return["《活着就是胜利》","七天结束了。\n你最大的成就是成功活到了结算画面。"];
+if(S.money<=500)return["《钱包比脸还干净》","你打开钱包。\n里面的空气非常新鲜。"];
+if(S.knowledge<=20)return["《我真的是大学生吗？》","学校认识你。\n教授不一定认识你。"];
+return["《平凡的一块石头》","你没有成为传奇。\n也没有彻底完蛋。\n七天以后，你还在继续滚。"]}
+function achievements(){let a=[],c=S.counts;if(c[3]>10)a.push(["中国人能飞","起飞超过10次。"]);if(c[6]>10)a.push(["睡美人","睡觉超过10次。"]);if(c[4]>15)a.push(["打工皇帝","打工超过15次。"]);if(S.knowledge>=100)a.push(["学术妲己","学识达到100。"]);if(S.health>=100)a.push(["人形自走蛋白粉","健康达到100。"]);if(S.mood>=100)a.push(["活着就是为了开心","心情达到100。"]);if(S.money>=30000)a.push(["钱不是万能的，但……","持有30000円以上。"]);if(c[7]>=8)a.push(["出门是会有好事的","出门达到8次。"]);if(c[2]>=10)a.push(["Steam大学荣誉毕业生","打游戏达到10次。"]);if(c[0]===0)a.push(["今天也没见到教授","七天一次课都没有上。"]);if(c.every(n=>n>0))a.push(["真・大学生","八种行动全部体验过。"]);return a}
+function finish(gameover,title,text){S.over=true;$("#game").classList.add("hidden");$("#result").classList.remove("hidden");let e=gameover?[title,text]:ending();$("#ending").textContent=e[0];$("#endingText").textContent=e[1];$("#finalStats").innerHTML=statsHTML()+`<div class="money">金钱 ¥${S.money.toLocaleString()}</div>`;let a=achievements(),names=["上课","健身","游戏","起飞","打工","吃饭","睡觉","出门"];$("#achievements").innerHTML=(a.length?a.map(x=>`<div class="ach">★ <b>${x[0]}</b><br><span class="muted">${x[1]}</span></div>`).join(""):`<p>没有解锁任何成就。<br>这本身似乎也是一种成就。</p>`)+`<p class="muted">${names.map((n,i)=>`${n} ${S.counts[i]}次`).join(" · ")}</p><b>共解锁 ${a.length} 个成就。</b>`}
+$$("[data-origin]").forEach(b=>b.addEventListener("click",()=>start(+b.dataset.origin)));
+$$("[data-action]").forEach(b=>b.addEventListener("click",()=>act(+b.dataset.action)));
+$("#restart").addEventListener("click",()=>{location.reload()});
+})();
+</script>
+</body></html>
